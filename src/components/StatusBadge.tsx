@@ -1,27 +1,25 @@
 "use client";
 
+import React from "react";
 import { cn } from "@/lib/utils";
+import { STATUS_COLORS } from "@/lib/constants";
 
 interface StatusBadgeProps {
   status: string;
-  statusMap: readonly { value: string; label: string; color: string }[];
-  size?: "sm" | "md";
+  className?: string;
 }
 
-export default function StatusBadge({ status, statusMap, size = "sm" }: StatusBadgeProps) {
-  const found = statusMap.find((s) => s.value === status);
-  const label = found?.label || status;
-  const color = found?.color || "bg-gray-100 text-gray-700";
+export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const colorClass = STATUS_COLORS[status as keyof typeof STATUS_COLORS] ||
+    "bg-slate-100 text-slate-800 border-slate-200";
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center font-medium rounded-full whitespace-nowrap",
-        color,
-        size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm"
-      )}
-    >
-      {label}
+    <span className={cn(
+      "inline-block px-3 py-1 rounded-full text-sm font-medium border",
+      colorClass,
+      className
+    )}>
+      {status}
     </span>
   );
 }

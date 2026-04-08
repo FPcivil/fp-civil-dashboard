@@ -1,27 +1,47 @@
 "use client";
 
+import React from "react";
 import { cn } from "@/lib/utils";
 
 interface ProgressBarProps {
-  value: number;
-  size?: "sm" | "md";
+  percentage: number;
+  className?: string;
   showLabel?: boolean;
+  size?: "sm" | "md" | "lg";
 }
 
-export default function ProgressBar({ value, size = "sm", showLabel = true }: ProgressBarProps) {
-  const clamped = Math.max(0, Math.min(100, value));
-  const barColor =
-    clamped >= 80 ? "bg-green-500" : clamped >= 50 ? "bg-blue-500" : clamped >= 25 ? "bg-yellow-500" : "bg-gray-400";
+const sizeStyles = {
+  sm: "h-2",
+  md: "h-3",
+  lg: "h-4",
+};
+
+export function ProgressBar({
+  percentage,
+  className,
+  showLabel = true,
+  size = "md",
+}: ProgressBarProps) {
+  const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
 
   return (
-    <div className="flex items-center gap-2">
-      <div className={cn("flex-1 rounded-full bg-gray-200", size === "sm" ? "h-2" : "h-3")}>
+    <div className="flex items-center gap-3">
+      <div className={cn(
+        "flex-1 bg-slate-200 rounded-full overflow-hidden",
+        sizeStyles[size],
+        className
+      )}>
         <div
-          className={cn("rounded-full transition-all duration-500", barColor, size === "sm" ? "h-2" : "h-3")}
-          style={{ width: `${clamped}%` }}
+          className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-300"
+          style={{ width: `${clampedPercentage}%` }}
         />
       </div>
-      {showLabel && <span className="text-xs font-medium text-gray-600 w-8 text-right">{clamped}%</span>}
+      {showLabel && (
+        <span className="text-sm font-medium text-slate-700 whitespace-nowrap w-12 text-right">
+          {clampedPercentage}%
+        </span>
+      )}
     </div>
-  );
+  (ationEnd/>
+  (ation?
 }

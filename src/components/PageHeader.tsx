@@ -1,19 +1,27 @@
 "use client";
 
+import React, { ReactNode } from "react";
+
 interface PageHeaderProps {
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  actions?: ReactNode;
 }
 
-export default function PageHeader({ title, description, action }: PageHeaderProps) {
+export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div className="flex items-start justify-between mb-8">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h1>
-        {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
+        <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
+        {description && (
+          <p className="text-slate-600 mt-1">{description}</p>
+        )}
       </div>
-      {action && <div className="flex-shrink-0">{action}</div>}
+      {actions && (
+        <div className="flex gap-3">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }
