@@ -12,7 +12,7 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export function EmptyState({
+export default function EmptyState({
   icon,
   title,
   description,
