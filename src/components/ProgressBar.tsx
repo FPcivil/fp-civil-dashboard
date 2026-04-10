@@ -4,7 +4,7 @@ interface ProgressBarProps {
   className?: string;
 }
 
-export default function ProgressBar({ value, max = 100, className = "" }: ProgressBarProps) {
+export function ProgressBar({ value, max = 100, className = "" }: ProgressBarProps) {
   const percent = Math.min(100, Math.max(0, (value / max) * 100));
   return (
     <div className={`w-full bg-gray-200 rounded-full h-2 ${className}`}>
@@ -15,3 +15,5 @@ export default function ProgressBar({ value, max = 100, className = "" }: Progre
     </div>
   );
 }
+
+export default ProgressBar;
