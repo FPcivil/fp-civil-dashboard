@@ -15,7 +15,7 @@ const priorityColors = {
   Low: "bg-blue-500",
 };
 
-export default function PriorityDot({ priority, className }: PriorityDotProps) {
+export function PriorityDot({ priority, className }: PriorityDotProps) {
   const color = priorityColors[priority as keyof typeof priorityColors] || "bg-slate-400";
 
   return (
@@ -29,3 +29,5 @@ export default function PriorityDot({ priority, className }: PriorityDotProps) {
     />
   );
 }
+
+export default PriorityDot;
