@@ -6,7 +6,7 @@ interface PageHeaderProps {
   children?: React.ReactNode;
 }
 
-export default function PageHeader({ title, subtitle, children }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   return (
     <div className="flex justify-between items-start mb-6">
       <div>
@@ -17,3 +17,5 @@ export default function PageHeader({ title, subtitle, children }: PageHeaderProp
     </div>
   );
 }
+
+export default PageHeader;
