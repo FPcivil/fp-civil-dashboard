@@ -1,27 +1,19 @@
 "use client";
 
-import React, { ReactNode } from "react";
-
 interface PageHeaderProps {
   title: string;
-  description?: string;
-  actions?: ReactNode;
+  subtitle?: string;
+  children?: React.ReactNode;
 }
 
-export function PageHeader({ title, description, actions }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between mb-8">
+    <div className="flex justify-between items-start mb-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
-        {description && (
-          <p className="text-slate-600 mt-1">{description}</p>
-        )}
+        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+        {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
       </div>
-      {actions && (
-        <div className="flex gap-3">
-          {actions}
-        </div>
-      )}
+      {children && <div>{children}</div>}
     </div>
   );
 }
