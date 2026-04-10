@@ -12,7 +12,7 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export default function EmptyState({
+export function EmptyState({
   icon,
   title,
   description,
@@ -43,3 +43,5 @@ export default function EmptyState({
     </div>
   );
 }
+
+export default EmptyState;
