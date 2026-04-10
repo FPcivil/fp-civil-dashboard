@@ -16,7 +16,7 @@ interface FormFieldProps {
   required?: boolean;
 }
 
-export default function FormField({ label, error, children, required }: FormFieldProps) {
+export function FormField({ label, error, children, required }: FormFieldProps) {
   return (
     <div className="mb-4">
       {label && (
@@ -127,3 +127,5 @@ export function Button({
     </button>
   );
 }
+
+export default FormField;
