@@ -20,7 +20,7 @@ const sizeStyles = {
   xl: "max-w-xl",
 };
 
-export default function Modal({
+export function Modal({
   isOpen,
   onClose,
   title,
@@ -72,3 +72,5 @@ export default function Modal({
     </div>
   );
 }
+
+export default Modal;
