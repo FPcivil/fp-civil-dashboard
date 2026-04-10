@@ -9,7 +9,7 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-export default function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, className }: StatusBadgeProps) {
   const colorClass = STATUS_COLORS[status as keyof typeof STATUS_COLORS] ||
     "bg-slate-100 text-slate-800 border-slate-200";
 
@@ -23,3 +23,5 @@ export default function StatusBadge({ status, className }: StatusBadgeProps) {
     </span>
   );
 }
+
+export default StatusBadge;
