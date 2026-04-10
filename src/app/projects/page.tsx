@@ -1,167 +1,263 @@
 "use client";
 
 import { useState } from "react";
+import { useProjectSummaries, insertRow } from "@/hooks/useSupabase";
+import { PageHeader } from "@/components/PageHeader";
+import { StatusBadge } from "@/components/StatusBadge";
+import { ProgressBar } from "@/components/ProgressBar";
+import { Modal } from "@/components/Modal";
+import { FormField, Input, Textarea, Select, Button } from "@/components/FormField";
+import { EmptyState } from "@/components/EmptyState";
+import { FolderOpen, Plus } from "lucide-react";
 import Link from "next/link";
-import { useProjectTSummaries } from "@/hooks/useSupabase";
-import { insertRow } from "@/components/useSupabase";
-import PageHeader from "A/components/PageHeader";
-import StatusBadge from "A/components/StatusBadge";
-import ProgressBar from "@/components/ProgressBar";
-import PriorityDot from "@/components/PriorityDot";
-import Modal from "A/components/Modal";
-import { FormField, inputClass, selectClass, textareaClass, Button } from "A/components/FormField";
-import { PROJECT_STATUSES, PRIORITIES } from "@/lib/constants";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { Plus, MapPin } from "lucide-react";
+import { formatDateShort } from "@/lib/utils";
+import { PROJECT_STATUSES } from "@/lib/constants";
+
+const statusOptions = Object.entries(PROJECT_STATUSES).map(([, value]) => ({
+  value,
+  label: value,
+}));
 
 export default function ProjectsPage() {
-  const { data: projects, loading, refetch } = useProjectSummaries();
-  const [showAdd, setShowAdd] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { projects, isLoading } = useProjectSummaries();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    client: "",
+    description: "",
+    status: "Planning",
+    start_date: "",
+    end_date: "",
+    budget: "",
+  });
 
-  async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    const fd = new FormData(e.currentTarget);
+    setIsSubmitting(true);
+
     try {
       await insertRow("projects", {
-        name: fd.get("name"),
-        address: fd.get("address") || null,
-        client: fd.get("client") || null,
-        status: fd.get("status"),
-        priority: fd.get("priority"),
-        contract_value: parseFloat(fd.get("contract_value") as string) || 0,
-        target_margin_pct: parseFloat(fd.get("target_margin_pct") as string) || 0,
-        start_date: fd.get("start_date") || null,
-        end_date: fd.get("end_date") || null,
+        name: formData.name,
+        client: formData.client || null,
+        description: formData.description || null,
+        status: formData.status,
+        start_date: formData.start_date || null,
+        end_date: formData.end_date || null,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
       });
-      setShowAdd(false);
-      refetch();
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+      setFormData({
+        name: "",
+        client: "",
+        description: "",
+        status: "Planning",
+        start_date: "",
+        end_date: "",
+        budget: "",
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error creating project:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div>
       <PageHeader
         title="Projects"
-        description={`${projects?.length ?? 0} projects`}
-        action={
-          <Button onClick={() => setShowAdd(true)}>
-            <Plus className="w-4 h-4" /> New Project
-          </Button>
+        description="Manage all construction projects"
+        actions={
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={20} />
+            New Project
+          </button>
         }
       />
 
-      {/* Project cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {projects?.map((p) => (
-          <Link
-            key={p.id}
-            href={`/projects/${p.id}`}
-            className="bg-white rounded-xl border p-5 hover:shadow-md transition-shadow group"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">{p.name}</h3>
-                {p.address && (
-                  <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                    <MapPin className="w-3 h-3" /> {p.address}
-                  </p>
-                )}
-              </div>
-              <StatusBadge status={p.status} statusMap={PROJECT_STATUSES} />
-            </div>
-
-            <ProgressBar value={p.progress_pct} size="md" />
-
-            <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-              <div className="bg-gray-50 rounded-lg py-2">
-                <p className="text-lg font-bold text-gray-900">{p.open_tasks}</p>
-                <p className="text-[10px] text-gray-500 uppercase">Tasks</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg py-2">
-                <p className="text-lg font-bold text-gray-900">{p.open_rfis}</p>
-                <p className="text-[10px] text-gray-500 uppercase">RFIs</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg py-2">
-                <p className="text-lg font-bold text-gray-900">{p.pending_variations}</p>
-                <p className="text-[10px] text-gray-500 uppercase">Variations</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mt-4 pt-3 border-t text-xs text-gray-500">
-              <span>
-                {p.project_manager_name ? `PM: ${p.project_manager_name}` : "No PM assigned"}
-              </span>
-              {p.overdue_tasks > 0 && (
-                <span className="text-red-600 font-medium">{p.overdue_tasks} overdue</span>
-              )}
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Add Project Modal */}
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="New Project" size="lg">
-        <form onSubmit={handleAdd} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Project Name" required>
-              <input name="name" required className={inputClass} placeholder="e.g. Peel St" />
-            </FormField>
-            <FormField label="Client">
-              <input name="client" className={inputClass} placeholder="Client name" />
-            </FormField>
+      {isLoading ? (
+        <div className="text-center py-12">
+          <p className="text-slate-600">Loading projects...</p>
+        </div>
+      ) : projects.length === 0 ? (
+        <EmptyState
+          icon={<FolderOpen size={48} className="text-slate-400" />}
+          title="No projects yet"
+          description="Create your first project to get started"
+          action={
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create Project
+            </button>
+          }
+        />
+      ) : (
+        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Project Name
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Client
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Status
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Progress
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Start Date
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    End Date
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Tasks
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((project) => (
+                  <tr
+                    key={project.id}
+                    className="border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        {project.name}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {project.client || "-"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={project.status || "Unknown"} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <ProgressBar
+                        percentage={project.progress ?? 0}
+                        size="sm"
+                        showLabel
+                      />
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {project.start_date ? formatDateShort(project.start_date) : "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {project.end_date ? formatDateShort(project.end_date) : "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                        {project.completed_tasks ?? 0} / {project.total_tasks ?? 0}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <FormField label="Address">
-            <input name="address" className={inputClass} placeholder="Site address" />
+        </div>
+      )}
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Create New Project"
+        description="Add a new construction project to the dashboard"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <FormField label="Project Name" required>
+            <Input
+              type="text"
+              placeholder="Project name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
           </FormField>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Status" required>
-              <select name="status" defaultValue="active" className={selectClass}>
-                {PROJECT_STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Priority" required>
-              <select name="priority" defaultValue="medium" className={selectClass}>
-                {PRIORITIES.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
-            </FormField>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Contract Value ($)">
-              <input name="contract_value" type="number" step="0.01" className={inputClass} placeholder="0" />
-            </FormField>
-            <FormField label="Target Margin (%)">
-              <input name="target_margin_pct" type="number" step="0.1" className={inputClass} placeholder="15" />
-            </FormField>
-          </div>
+
+          <FormField label="Client">
+            <Input
+              type="text"
+              placeholder="Client name"
+              value={formData.client}
+              onChange={(e) => setFormData({ ...formData, client: e.target.value })}
+            />
+          </FormField>
+
+          <FormField label="Status">
+            <Select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              options={statusOptions}
+            />
+          </FormField>
+
+          <FormField label="Description">
+            <Textarea
+              placeholder="Project description"
+              rows={4}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </FormField>
+
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Start Date">
-              <input name="start_date" type="date" className={inputClasr} />
+              <Input
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              />
             </FormField>
             <FormField label="End Date">
-              <input name="end_date" type="date" className={inputClass} />
+              <Input
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              />
             </FormField>
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Create Project"}</Button>
+
+          <FormField label="Budget">
+            <Input
+              type="number"
+              placeholder="Budget amount"
+              value={formData.budget}
+              onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+              step="0.01"
+            />
+          </FormField>
+
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-200">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isSubmitting}
+            >
+              Create Project
+            </Button>
           </div>
         </form>
       </Modal>

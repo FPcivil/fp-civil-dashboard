@@ -1,149 +1,225 @@
 "use client";
 
 import { useState } from "react";
-import { useTableData, insertRow } from "@/hooks/useSupabase";
-import PageHeader from "@/components/PageHeader";
-import StatusBadge from "A/components/StatusBadge";
-import PriorityDot from "@/components/PriorityDot";
-import Modal from "@/components/Modal";
-import { FormField, inputClass, selectClass, textareaClass, Button } from "@/components/FormField";
-import { RFI_STATUSES, PRIORITIES } from "A/lib/constants";
-import { formatDateShort, isOverdue } from "@/lib/utils";
-import { Plus } from "lucide-react";
-import Link from "next/link";
-import type { Rfi, Project, TeamMember } from "@/lib/database.types";
+import { useTableData, insertRow, updateRow } from "@/hooks/useSupabase";
+import { PageHeader } from "@/components/PageHeader";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Modal } from "@/components/Modal";
+import { FormField, Input, Textarea, Select, Button } from "@/components/FormField";
+import { EmptyState } from "@/components/EmptyState";
+import { HelpCircle, Plus } from "lucide-react";
+import { formatDateShort } from "@/lib/utils";
+import { RFI_STATUSES } from "@/lib/constants";
 
-type RfiWithProject = Rfi & { projects: { name: string } };
+const statusOptions = Object.entries(RFI_STATUSES).map(([, value]) => ({
+  value,
+  label: value,
+}));
 
 export default function RfisPage() {
-  const [showAdd, setShowAdd] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const { data: rfis, loading, refetch } = useTableData<RfiWithProject>("rfis", {
-    select: "*, projects(name)",
-    order: { column: "created_at", ascending: false },
+  const { data: rfis, isLoading } = useTableData("rfis");
+  const { data: projects } = useTableData("projects");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    project_id: "",
+    description: "",
+    status: "Submitted",
   });
 
-  const { data: projects } = useTableData<Project>("projects", { filter: { status: "active" } });
-  const { data: team } = useTableData<TeamMember>("team_members", { filter: { is_active: true } });
-
-  async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    const fd = new FormData(e.currentTarget);
+    setIsSubmitting(true);
+
     try {
       await insertRow("rfis", {
-        project_id: fd.get("project_id"),
-        rfi_number: fd.get("rfi_number"),
-        subject: fd.get("subject"),
-        description: fd.get("description") || null,
-        assigned_to_id: fd.get("assigned_to_id") || null,
-        priority: fd.get("priority"),
-        date_raised: fd.get("date_raised") || null,
-        response_due_date: fd.get("response_due_date") || null,
+        title: formData.title,
+        project_id: formData.project_id,
+        description: formData.description || null,
+        status: formData.status,
+        submitted_date: new Date().toISOString(),
       });
-      setShowAdd(false);
-      refetch();
-    } catch (err: any) {
-      alert(err.message);
+
+      setFormData({
+        title: "",
+        project_id: "",
+        description: "",
+        status: "Submitted",
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error creating RFI:", error);
     } finally {
-      setSaving(false);
+      setIsSubmitting(false);
     }
-  }
-
-  if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>;
-  }
-
-  const openCount = rfis?.filter((r) => r.status === "open").length ?? 0;
-  const overdueCount = rfis?.filter((r) => r.status === "open" && r.response_due_date && isOverdue(r.response_due_date)).length ?? 0;
+  };
 
   return (
     <div>
       <PageHeader
         title="RFIs"
-        description={`${rfis?.length ?? 0} total | ${openCount} open${overdueCount > 0 ? ` | ${overdueCount} overdue` : ""}`}
-        action={<Button onClick={() => setShowAdd(true)}><Plus className="w-4 h-4" /> New RFI</Button>}
+        description="Manage Requests for Information"
+        actions={
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={20} />
+            New RFI
+          </button>
+        }
       />
 
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium">#</th>
-                <th className="text-left px-4 py-3 font-medium">Subject</th>
-                <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Project</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Priority</th>
-                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Due</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {rfis?.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-gray-500 text-xs">{r.rfi_number}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{r.subject}</td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <Link href={`/projects/${r.project_id}`} className="text-amber-600 hover:text-amber-700">{r.projects?.name}</Link>
-                  </td>
-                  <td className="px-4 py-3"><StatusBadge status={r.status} statusMap={RFI_STATUSES} /></td>
-                  <td className="px-4 py-3 hidden md:table-cell"><PriorityDot priority={r.priority} /></td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <span className={r.response_due_date && isOverdue(r.response_due_date) && r.status === "open" ? "text-red-600 font-medium" : "text-gray-500"}>
-                      {formatDateShort(r.response_due_date)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {isLoading ? (
+        <div className="text-center py-12">
+          <p className="text-slate-600">Loading RFIs...</p>
         </div>
-      </div>
+      ) : rfis.length === 0 ? (
+        <EmptyState
+          icon={<HelpCircle size={48} className="text-slate-400" />}
+          title="No RFIs yet"
+          description="Create your first RFI when you need clarification"
+          action={
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create RFI
+            </button>
+          }
+        />
+      ) : (
+        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Title
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Project
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Status
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Submitted By
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Submitted Date
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">
+                    Response Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rfis.map((rfi) => {
+                  const project = projects.find((p) => p.id === rfi.project_id);
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="New RFI">
-        <form onSubmit={handleAdd} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Project" required>
-              <select name="project_id" required className={selectClass}>
-                <option value="">Select...</option>
-                {projects?.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </FormField>
-            <FormField label="RFI #" required>
-              <input name="rfi_number" required className={inputClass} placeholder="RFI-001" />
-            </FormField>
+                  return (
+                    <tr
+                      key={rfi.id}
+                      className="border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-slate-900">{rfi.title}</p>
+                        {rfi.description && (
+                          <p className="text-sm text-slate-600 mt-1">
+                            {rfi.description.substring(0, 50)}...
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {project?.name || "Unknown"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={rfi.status} />
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {rfi.submitted_by || "-"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {rfi.submitted_date ? formatDateShort(rfi.submitted_date) : "-"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {rfi.response_date ? formatDateShort(rfi.response_date) : "-"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <FormField label="Subject" required>
-            <input name="subject" required className={inputClass} placeholder="RFI subject" />
+        </div>
+      )}
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Create New RFI"
+        description="Submit a new Request for Information"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <FormField label="RFI Title" required>
+            <Input
+              type="text"
+              placeholder="RFI title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+            />
           </FormField>
+
+          <FormField label="Project" required>
+            <Select
+              value={formData.project_id}
+              onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
+              required
+            >
+              <option value="">Select a project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
           <FormField label="Description">
-            <textarea name="description" rows={3} className={textareaClass} />
+            <Textarea
+              placeholder="Detailed description of the RFI"
+              rows={4}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
           </FormField>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Priority" required>
-              <select name="priority" defaultValue="medium" className={selectClass}>
-                {PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Assigned To">
-              <select name="assigned_to_id" className={selectClass}>
-                <option value="">Unassigned</option>
-                {team?.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-              </select>
-            </FormField>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Date Raised">
-              <input name="date_raised" type="date" className={inputClass} defaultValue={new Date().toISOString().split("T")[0]} />
-            </FormField>
-            <FormField label="Response Due">
-              <input name="response_due_date" type="date" className={inputClass} />
-            </FormField>
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Create RFI"}</Button>
+
+          <FormField label="Status">
+            <Select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              options={statusOptions}
+            />
+          </FormField>
+
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-200">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isSubmitting}
+            >
+              Create RFI
+            </Button>
           </div>
         </form>
       </Modal>

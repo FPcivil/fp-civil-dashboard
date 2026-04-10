@@ -1,48 +1,73 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import React, { ReactNode, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
 interface ModalProps {
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
   title: string;
-  children: React.ReactNode;
-  size?: "sm" | "md" | "lg";
+  description?: string;
+  children: ReactNode;
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
-export default function Modal({ open, onClose, title, children, size = "md" }: ModalProps) {
-  const ref = useRef<HTMLDivElement>(null);
+const sizeStyles = {
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+};
 
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  description,
+  children,
+  size = "md",
+}: ModalProps) {
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
       document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = "";
+      document.body.style.overflow = "unset";
     }
-    return () => { document.body.style.overflow = ""; };
-  }, [open]);
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
 
-  if (!open) return null;
-
-  const widthClass = size === "sm" ? "max-w-md" : size === "lg" ? "max-w-2xl" : "max-w-lg";
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        ref={ref}
-        className={`relative bg-white w-full ${widthClass} rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] flex flex-col`}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-            <X className="w-5 h-5" />
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+      />
+      <div className={cn(
+        "relative bg-white rounded-lg shadow-lg w-full mx-4",
+        sizeStyles[size]
+      )}>
+        <div className="flex items-start justify-between border-b border-slate-200 p-6">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+            {description && (
+              <p className="text-sm text-slate-600 mt-1">{description}</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <X size={20} className="text-slate-500" />
           </button>
         </div>
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="p-6">
+          {children}
+        </div>
       </div>
     </div>
   );

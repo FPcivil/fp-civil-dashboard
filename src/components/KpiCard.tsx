@@ -67,11 +67,11 @@ export function KpiCard({
                 <>
                   <TrendingUp size={16} className="text-green-600" />
                   <span className="text-sm font-medium text-green-600">
-                    {trend}%
+                    +{trend}%
                   </span>
                 </>
               ) : isTrendNegative ? (
-                  <>
+                <>
                   <TrendingDown size={16} className="text-red-600" />
                   <span className="text-sm font-medium text-red-600">
                     {trend}%

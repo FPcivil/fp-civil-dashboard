@@ -42,6 +42,5 @@ export function ProgressBar({
         </span>
       )}
     </div>
-  (ationEnd/>
-  (ation?
+  );
 }
