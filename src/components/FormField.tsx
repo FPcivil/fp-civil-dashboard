@@ -16,7 +16,7 @@ interface FormFieldProps {
   required?: boolean;
 }
 
-export function FormField({ label, error, children, required }: FormFieldProps) {
+export default function FormField({ label, error, children, required }: FormFieldProps) {
   return (
     <div className="mb-4">
       {label && (
