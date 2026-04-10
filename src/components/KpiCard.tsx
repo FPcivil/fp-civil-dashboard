@@ -30,7 +30,7 @@ const textColorStyles = {
   slate: "text-slate-700",
 };
 
-export function KpiCard({
+export default function KpiCard({
   title,
   value,
   unit = "",
